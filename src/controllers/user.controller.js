@@ -4,6 +4,27 @@ import User from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 
+
+const generateAccessAndRefreshToken = async(userId) =>{
+  try {
+    const user = await User.findById(userId); 
+    const accessToken = user.generateAccessToken(); 
+    const refreshToken = user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;   //we set our generated refresh token. 
+
+   await user.save({ validateBeforeSave: false});   //to turn off the validation before saving user object with refresh token
+
+   return {accessToken, refreshToken}
+
+  } catch (error) {
+      throw new ApiError(500, "Something went wrong while generating tokens");  
+  }
+}
+
+
+
+
 export const registerUser = asyncHandler(async (req, res) => { 
   const { username, email, fullName, password, bio} = req.body;
 
@@ -28,7 +49,9 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar is required");
   }
 
-  if( req?.files && Array.isArray(req.files?.coverImage) && req.files?.coverImage.length >0){
+  if( req?.files 
+      && Array.isArray(req.files?.coverImage) 
+      && req.files?.coverImage?.length >0){
     coverImageLocalPath = req.files.coverImage[0].path;
   }
 
@@ -67,3 +90,30 @@ export const registerUser = asyncHandler(async (req, res) => {
         )
   )
 });
+
+
+export const loginUser = asyncHandler( async(req, res) => {
+
+  const { email, password } = req.body
+
+  if (!email && !password) throw new ApiError(400, "Provide credientials for login"); 
+
+  const user = await User.findOne({"email": email});     //this user contains all the methods that we created in our Schema
+
+  if(!user) throw new ApiError(404, "no user found"); 
+
+
+  const checkPassword = await user.isPasswordCorrect(password);   //accessing methods from the user object returned by database
+
+  if(!checkPassword) throw new ApiError(401, "password is incorrect"); 
+
+
+  const accessToken = await user.generateAccessToken(); 
+
+  const refreshToken = await user.generateRefreshToken(); 
+
+
+
+  
+
+} )
