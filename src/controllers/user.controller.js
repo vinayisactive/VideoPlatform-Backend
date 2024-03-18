@@ -102,18 +102,58 @@ export const loginUser = asyncHandler( async(req, res) => {
 
   if(!user) throw new ApiError(404, "no user found"); 
 
-
   const checkPassword = await user.isPasswordCorrect(password);   //accessing methods from the user object returned by database
 
   if(!checkPassword) throw new ApiError(401, "password is incorrect"); 
 
 
-  const accessToken = await user.generateAccessToken(); 
+  const {refreshToken, accessToken} = await generateAccessAndRefreshToken(user._id);
+        //by now refreshToken is added, So user object is also updated. 
 
-  const refreshToken = await user.generateRefreshToken(); 
-
-
-
+  const loggedInUser = await User.findById(user._id).select("-password", "-refreshToken"); 
   
+  
+  const cookieOptions = {     //because of these two properites, now cookies can only be modified from server, not from frontend.
+             httpOnly: true, 
+             secure: true
+  } 
 
+  return res.status(200)
+            .cookie("refreshToken", refreshToken, cookieOptions)
+            .cookie("accessToken", accessToken, cookieOptions)
+            .json(
+                new ApiResponse(
+                  200, 
+                  {user: loggedInUser, accessToken, refreshToken},
+                  "User logged In successfully"
+                  ))
 } )
+
+
+export const logoutUser = asyncHandler(async(req, res) => {
+  const _id = req.user._id; 
+
+  await User.findByIdAndUpdate(
+    _id, 
+    { 
+      $set: {
+        refreshToken: undefined
+      }
+    }, 
+    {new: true}
+  ); 
+
+  const cookieOptions = {     //because of these two properites, now cookies can only be modified from server, not from frontend.
+    httpOnly: true, 
+    secure: true
+} 
+
+  return res
+  .status(200)
+  .clearCookie("refreshToken", cookieOptions)
+  .clearCookie("accessToken", cookieOptions)
+  .json(
+      new ApiResponse(
+        200, {}, "user logged out" 
+      )); 
+})
