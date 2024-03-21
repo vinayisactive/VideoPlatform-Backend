@@ -267,6 +267,58 @@ export const updateUserDetails = asyncHandler(async(req, res) => {
 }); 
 
 
+export const updateUserImages = asyncHandler(async(req, res) => {
+ try {
+     let avatarPath; 
+     let coverImagePath; 
+
+     // if avatar is available
+     let avatarCloudinaryResponse; 
+      if(req?.files && Array.isArray(req?.files?.avatar) && req?.files?.avatar.length > 0){
+        avatarPath = await req.files?.avatar[0].path;
+
+        avatarCloudinaryResponse = await uploadOnCloudinary(avatarPath); 
+        if(!avatarCloudinaryResponse?.url)
+        throw new ApiError(400,"Failed to upload avatar")
+      }
+
+      // if coverImage is available
+      let coverImageCloudinaryResponse; 
+      if(req?.files && Array.isArray(req?.files?.coverImage) && req?.files?.coverImage.length > 0){
+        coverImagePath = await req.files.coverImage[0].path; 
+        coverImageCloudinaryResponse = await uploadOnCloudinary(coverImagePath); 
+
+        if (!coverImageCloudinaryResponse?.url)
+        throw new ApiError(400, "Failed to upload cover image");
+      }
+
+      const user = await User.findById(req?.user._id); 
+
+      if(!user)
+        throw new ApiError(401, "Invalid User"); 
+
+      if(avatarPath && avatarCloudinaryResponse?.url ) user.avatar = avatarCloudinaryResponse?.url; 
+      if(coverImagePath && coverImageCloudinaryResponse?.url) user.coverImage = coverImageCloudinaryResponse?.url; 
+
+     await user.save({validateBeforeSave: false}); 
+
+     return res
+     .status(200)
+     .json(
+      new ApiResponse(
+        200,
+        {
+          avatar : avatarCloudinaryResponse,
+          coverImage : coverImageCloudinaryResponse
+        },
+        "User images updated"
+      )
+     )
+
+ } catch (error) {
+    throw new ApiError(401, error.message || "Something went wrong"); 
+ }
+}); 
 
 
 
