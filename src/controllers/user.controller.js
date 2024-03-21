@@ -5,13 +5,14 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
+//cookie options
 const cookieOptions = {
   //because of these two properites, now cookies can only be modified from server, not from frontend.
   httpOnly: true,
   secure: true,
 };
 
-
+//function
 const generateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -28,7 +29,7 @@ const generateAccessAndRefreshToken = async (userId) => {
   }
 };
 
-
+//controllers
 export const registerUser = asyncHandler(async (req, res) => {
   const { username, email, fullName, password, bio } = req.body;
 
@@ -225,7 +226,8 @@ export const changeCurrentPassword = asyncHandler(async (req, res) => {
   
     return res
       .status(200)
-      .json(new ApiResponse(200, {}, "Password changed successfully"));
+      .json(
+          new ApiResponse(200, {}, "Password changed successfully"));
       
   } catch (error) {
     throw new ApiError(401, error?.message || "something went wrong")
@@ -256,9 +258,7 @@ export const updateUserDetails = asyncHandler(async(req, res) => {
       .status(200)
       .json(
         new ApiResponse(
-          200,
-          {updatedDetails},
-          "User details updated successfully"
+          200, {updatedDetails}, "User details updated successfully"
         )
       )
   } catch (error) {
