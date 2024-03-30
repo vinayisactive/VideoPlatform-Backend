@@ -321,6 +321,90 @@ export const updateUserImages = asyncHandler(async(req, res) => {
 }); 
 
 
+export const getUserChannelDetails = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username?.trim()) 
+  throw new ApiError(400, "Username is missing");
+
+try {
+    const channel = await User.aggregate([
+      { //matched the user in databse 
+        $match: {
+          username: username?.toLowerCase(),
+        },
+      },
+      { //lookup for channel subscribers
+        $lookup: { 
+          from: "subscriptions", //cause of name conversion inside database 
+          localField: "_id",
+          foreignField: "channel", //for subscribers, we searching channel
+          as: "subscribers",
+        },
+      },
+      {  //lookup for subscribed channels
+        $lookup: {
+          from: "subscriptions",
+          localField: "_id",
+          foreignField: "subscriber", //for subscribed by users
+          as: "subscribedTo",
+        },
+      },
+      { //addfields pipeline
+        $addFields: {  //created/added fields inside user object
+          subscribers: {
+            $size: "$subscribers", //size returns the count of documents, and "$subscribers" cause its a filed now
+          },
+          subscribed: {
+            $size: "$subscribedTo",
+          },
+          isSubscribed: {
+            $cond: {
+              if: { $in: [req?.user._id, "$subscribers.subscriber"] }, //$in can search inside both array and objects
+              then: true,
+              else: false,
+            },
+          },
+        },
+      },
+      { //projection pipline
+        $project: {    // Sent only these fields to user 
+            username: 1,  // Set the value to 1 for each field to include it in the output.
+            fullName: 1, 
+            avatar: 1,
+            coverImage: 1,
+            bio: 1, 
+            email: 1,
+            createdAt: 1,
+            subscribers: 1,
+            subscribed: 1,
+            isSubscribed: 1
+        }
+      }
+    ]);
+  
+    if(!channel?.length)
+      throw new ApiError(404, "Channel doesn't exists"); 
+
+    return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        channel[0],    //aggregation operation returns array of single or multiple objects, 
+                              //in our case we only want one user channel details that is why we are returning first element of array
+        "Channel Details"
+      )
+    ); 
+  
+} catch (error) {
+  throw new ApiError(401, error?.message || "User doesn't exists"); 
+}
+
+
+});
+
+
 
 
 
