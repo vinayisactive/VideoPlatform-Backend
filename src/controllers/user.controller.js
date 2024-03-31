@@ -4,6 +4,7 @@ import User from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 //cookie options
 const cookieOptions = {
@@ -391,18 +392,84 @@ try {
     .json(
       new ApiResponse(
         200,
-        channel[0],    //aggregation operation returns array of single or multiple objects, 
-                              //in our case we only want one user channel details that is why we are returning first element of array
+        channel[0],    // Aggregation operations can return arrays containing single or multiple objects. In this   context, we're only interested in retrieving details for a single user channel, hence we return the first element of the array.
         "Channel Details"
       )
     ); 
-  
-} catch (error) {
+  } catch (error) {
   throw new ApiError(401, error?.message || "User doesn't exists"); 
-}
-
-
+  }
 });
+
+
+export const getWatchedHistory = asyncHandler(async(req, res) => {
+    const user = await User.aggregate([
+      {
+        $match:{
+           // In aggregate operations, the "_id" field remains as string without being automatically converted to an ObjectId under the hood. To perform the conversion, Mongoose provide methods.
+          _id: new mongoose.Types.ObjectId(req?.user._id)
+        }
+      },
+      {
+        $lookup: {            // Performing a left outer join with the "videos" collection to populate the watchHistory field that is inside user object.
+          from: "videos",
+          localField: "watchHistory",  
+          foreignField: "_id",
+          as: "watchHistory",        //Overriding "watchHistory" field itslef to add videos in it, instead of creating a new field inside user object.
+  
+         // This sub-pipeline enhances each "video" in watchHistory with information about its owner (cause owner inside videos isn't lookedup yet)    
+          pipeline: [ 
+            {
+              $lookup: {        
+                // Performing a left outer join with the "users" collection to populate the "owner" field inside each video
+                from: "users",          
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",               //Overriding "owner" field inside video object to add user  information. 
+                
+                //This $project stage is placed inside the sub-pipeline of the $lookup stage. This means that this sub-pipeline will be applied to the object retrieved from the "users" collection after the join, before they are embedded into the "owner" field of the video object.
+                pipeline: [
+                 {
+                    $project: {            
+                    username: 1,
+                    fullName: 1,
+                    avatar: 1,
+                   }
+                 },
+                 {  
+                  // This additional pipeline stage replaces the "owner" array field (Inside each video cause aggregate operations returns array of object) with the first element/object of the owner array ( frontend convenient)
+                  $addFields: {  
+                    owner: {   //overriding owner array field with Owner array first element 
+                      $first: "$owner" //$first for first element of array
+
+                    }
+                  }
+                }]
+              }
+            }
+          ]
+        }
+      }
+    ])
+
+    if(!user) 
+      throw new ApiError(401, "something went wrong")
+
+    return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "Watch History fetched successfully"
+      )
+    )
+})
+
+
+
+
+
 
 
 
