@@ -131,8 +131,8 @@ export const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     _id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1,  //this will set refreshToken to null
       },
     },
     { new: true }
@@ -363,7 +363,7 @@ try {
             $cond: {
               if: { $in: [req?.user._id, "$subscribers.subscriber"] }, //$in can search inside both array and objects
               then: true,
-              else: false,
+              else: false
             },
           },
         },
