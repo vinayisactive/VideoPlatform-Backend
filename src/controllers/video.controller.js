@@ -13,7 +13,7 @@ export const publishAVideo = asyncHandler(async (req, res) => {
     const thumbnailFilePath = req.files?.thumbnail[0].path;
 
     if (!user) 
-    throw new ApiError(401, "Unauthorised user");
+    throw new ApiError(403, "Unauthorised User");
 
     if(!title || !description)
         throw new ApiError(400, "Provide title and description"); 
@@ -54,13 +54,13 @@ export const publishAVideo = asyncHandler(async (req, res) => {
 
 export const getVideoById = asyncHandler(async(req, res) => {
     const { videoId } = req.params
-    const userId = req?.user?._id;
+    // const userId = req?.user?._id;
 
-    if(!userId)
-      throw new ApiError(401, "Unauthorised User"); 
+    // if(!userId)
+    //   throw new ApiError(403, "Unauthorised User"); 
 
      if(!videoId)
-      throw new ApiError(401, "Invalid video id"); 
+      throw new ApiError(404, "Video doesn't exists"); 
 
       const video = await Video.aggregate([
         {
@@ -124,7 +124,7 @@ export const getVideoById = asyncHandler(async(req, res) => {
       ])
 
       if(!video)
-        throw new ApiError(500, "No vidoe found"); 
+        throw new ApiError(404, "No video found"); 
  
      return res
      .status(200)
@@ -191,7 +191,7 @@ export const deleteVideo = asyncHandler(async(req, res) => {
     throw new ApiError(404, "Video doesn't exist"); 
 
   if(videoDetails.owner?.toString() !== userId.toString())
-    throw new ApiError("500", "Unauthorised User to delete the video"); 
+    throw new ApiError("403", "Unauthorised User to delete the video"); 
 
   const deletedVideoRefrence = await Video.findByIdAndDelete(videoId); 
 
@@ -212,9 +212,11 @@ export const toggleVideoStatus = asyncHandler(async(req, res) => {
   const userId = req?.user._id; 
 
   const videoDetails = await Video.findById(videoId); 
+  if (!videoDetails)
+    throw new ApiError(404, "Video doesn't exists");
 
   if(videoDetails.owner.toString() !== userId.toString())
-    throw new ApiError(500, "Unauthorised User to toggle the video status"); 
+    throw new ApiError(403, "Unauthorised User to toggle the video status"); 
 
   const status = videoDetails.isPublished === true ?  false : true;
   videoDetails.isPublished = status; 
@@ -235,7 +237,5 @@ export const toggleVideoStatus = asyncHandler(async(req, res) => {
       "Video status updated successfully"
     )
   ); 
-  
-
 })
 
