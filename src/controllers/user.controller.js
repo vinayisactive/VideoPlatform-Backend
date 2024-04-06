@@ -465,17 +465,3 @@ export const getWatchedHistory = asyncHandler(async(req, res) => {
       )
     )
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
