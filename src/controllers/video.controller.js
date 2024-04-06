@@ -52,10 +52,12 @@ export const publishAVideo = asyncHandler(async (req, res) => {
   )
 });
 
-
 export const getVideoById = asyncHandler(async(req, res) => {
     const { videoId } = req.params
     const userId = req?.user?._id;
+
+    if(!userId)
+      throw new ApiError(401, "Unauthorised User"); 
 
      if(!videoId)
       throw new ApiError(401, "Invalid video id"); 
@@ -134,3 +136,106 @@ export const getVideoById = asyncHandler(async(req, res) => {
         )
      )
 })
+
+export const updateVideoDetails = asyncHandler(async(req, res) => {
+
+  const { title, description } = req.body 
+  const { videoId } = req.params; 
+  const userId = req?.user._id; 
+
+
+  const videoDetails = await Video.findById(videoId); 
+  if(!videoDetails)
+  throw new ApiError(404, "Video doesn't exists");  
+
+  if(videoDetails.owner?.toString() !== userId?.toString())
+    throw new ApiError(400, "Unauthorised User to update the video details"); 
+
+
+  let thumbnailFileCloudinary;
+  if(req?.files && Array.isArray(req?.files.thumbnail) && req?.files?.thumbnail?.length > 0){
+       const thumbnailPath = await req.files.thumbnail[0].path; 
+    
+      thumbnailFileCloudinary = await uploadOnCloudinary(thumbnailPath); 
+      if(!thumbnailFileCloudinary.url)
+        throw new ApiError(500, "Failed to upload thumbnail"); 
+    }
+  
+
+  if(title) videoDetails.title = title; 
+  if(description) videoDetails.description =  description; 
+  if(thumbnailFileCloudinary?.url) videoDetails.thumbnail = thumbnailFileCloudinary.url; 
+
+
+  const updatedVideoRefrence = await videoDetails.save({validateBeforeSave: false}); 
+  if(!updatedVideoRefrence)
+    throw new ApiError(401, "Failed to update video details"); 
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(
+      200,
+      updatedVideoRefrence,
+      "Video details updated successfully"
+    )
+  ); 
+})
+
+export const deleteVideo = asyncHandler(async(req, res) => {
+  const { videoId } = req.params;
+  const userId = req?.user._id; 
+
+  const videoDetails = await Video.findById(videoId); 
+  if(!videoDetails)
+    throw new ApiError(404, "Video doesn't exist"); 
+
+  if(videoDetails.owner?.toString() !== userId.toString())
+    throw new ApiError("500", "Unauthorised User to delete the video"); 
+
+  const deletedVideoRefrence = await Video.findByIdAndDelete(videoId); 
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(
+      200, 
+      deletedVideoRefrence,
+      "Video deleted Successfully"
+    )
+  );
+
+})
+
+export const toggleVideoStatus = asyncHandler(async(req, res) => {
+  const { videoId } = req.params; 
+  const userId = req?.user._id; 
+
+  const videoDetails = await Video.findById(videoId); 
+
+  if(videoDetails.owner.toString() !== userId.toString())
+    throw new ApiError(500, "Unauthorised User to toggle the video status"); 
+
+  const status = videoDetails.isPublished === true ?  false : true;
+  videoDetails.isPublished = status; 
+
+  const updatedStatusRefrence = await videoDetails.save({validateBeforeSave: false}); 
+
+  if(!updatedStatusRefrence)
+    throw new ApiError(500, "Failed to update the video status"); 
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(
+      200,
+      {
+        isPublished: updatedStatusRefrence.isPublished
+      },
+      "Video status updated successfully"
+    )
+  ); 
+  
+
+})
+
