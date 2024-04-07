@@ -40,7 +40,6 @@ export const addComment = asyncHandler(async(req, res) => {
     )
 }); 
 
-
 export const getComments = asyncHandler(async(req, res) => {
     const { videoId } = req.params; 
 
@@ -91,3 +90,37 @@ export const getComments = asyncHandler(async(req, res) => {
         )
     )
 })
+
+export const updateComment = asyncHandler(async(req, res) => {
+    const { commentId } = req.params; 
+    const { content } = req.body; 
+    const userId = req?.user._id; 
+    
+    if(!commentId)
+        throw new ApiError(404, "No comment found"); 
+
+    if(!content)
+        throw new ApiError(401, "Provide comment content"); 
+
+    const getComment = await Commet.findById(commentId); 
+
+    if(getComment.owner.toString() !== userId.toString())
+        throw new ApiError(500, "Unauthorised user to update the comment"); 
+
+    getComment.content = content; 
+    const updatedCommentRefrence = await getComment.save({validateBeforeSave: false}); 
+
+    if(!updatedCommentRefrence)
+        throw new ApiError(500, "Failed to update comment"); 
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            updatedCommentRefrence,
+            "Comment updated successfully"      
+        )
+    ); 
+})
+
