@@ -36,6 +36,22 @@ export const createPlaylist = asyncHandler(async(req, res) => {
 
 })
 
+export const getUserPlaylists = asyncHandler(async(req, res) => {
+    const userId = req?.user._id; 
+
+    const playlists = await Playlist.find({owner: userId}); 
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            playlists,
+            "All Playlists fetched"
+        )
+    )
+}); 
+
 export const getPlaylistById = asyncHandler(async(req, res) => {
     const { playlistId } = req.params
      
@@ -106,4 +122,6 @@ export const getPlaylistById = asyncHandler(async(req, res) => {
         )
     ); 
 })
+
+
 
