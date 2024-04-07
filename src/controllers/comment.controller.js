@@ -1,8 +1,8 @@
-import { Commet } from "../models/comment.model.js";
+import { Comment } from "../models/comment.model.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from '../utils/ApiResponse.js'
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 
 export const addComment = asyncHandler(async(req, res) => {
     const { videoId } = req.params; 
@@ -18,7 +18,7 @@ export const addComment = asyncHandler(async(req, res) => {
     if(!videoId)
       throw new ApiError(404, "Video not found"); 
 
-    const createComment = await Commet.create({
+    const createComment = await Comment.create({
         content: content, 
         video: videoId, 
         owner: userId
@@ -46,7 +46,7 @@ export const getComments = asyncHandler(async(req, res) => {
     if(!videoId)
         throw new ApiError(404, "Video not found");
 
-    const comments = await Commet.aggregate([
+    const comments = await Comment.aggregate([
         {
             $match:{
                 video: new mongoose.Types.ObjectId(videoId)
@@ -102,7 +102,7 @@ export const updateComment = asyncHandler(async(req, res) => {
     if(!content)
         throw new ApiError(401, "Provide comment content"); 
 
-    const getComment = await Commet.findById(commentId); 
+    const getComment = await Comment.findById(commentId); 
 
     if(getComment.owner.toString() !== userId.toString())
         throw new ApiError(500, "Unauthorised user to update the comment"); 
@@ -124,3 +124,30 @@ export const updateComment = asyncHandler(async(req, res) => {
     ); 
 })
 
+export const deleteComment = asyncHandler(async(req, res) => {
+    const { commentId } = req.params;
+    const userId = req?.user._id; 
+
+    if(!commentId)
+        throw new ApiError(404, "No comment found"); 
+
+    const getComment = await Comment.findById(commentId); 
+
+    if(getComment.owner.toString() !== userId.toString())
+        throw new ApiError(500, "Unauthorised User to delete the comment"); 
+
+    const deletedCommentRefrence = await Comment.findByIdAndDelete(commentId); 
+
+    if(!deletedCommentRefrence)
+        throw new ApiError(500, "Failed to delete comment, try again"); 
+    
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            deletedCommentRefrence,
+            "Comment deleted successfully"
+        )
+    ); 
+})
