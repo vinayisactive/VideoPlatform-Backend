@@ -21,3 +21,6 @@ app.use("/api/v1/users", userRouter);
 
 import videoRouter from './routes/video.routes.js'
 app.use("/api/v1/videos", videoRouter); 
+
+import SubscriptionRouter from './routes/subscription.routes.js'
+app.use("/api/v1/subscription", SubscriptionRouter); 
