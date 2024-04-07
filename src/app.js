@@ -24,3 +24,6 @@ app.use("/api/v1/videos", videoRouter);
 
 import SubscriptionRouter from './routes/subscription.routes.js'
 app.use("/api/v1/subscription", SubscriptionRouter); 
+
+import CommentRouter from './routes/comment.routes.js'
+app.use("/api/v1/comments", CommentRouter); 
