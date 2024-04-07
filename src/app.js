@@ -22,8 +22,11 @@ app.use("/api/v1/users", userRouter);
 import videoRouter from './routes/video.routes.js'
 app.use("/api/v1/videos", videoRouter); 
 
-import SubscriptionRouter from './routes/subscription.routes.js'
-app.use("/api/v1/subscription", SubscriptionRouter); 
+import subscriptionRouter from './routes/subscription.routes.js'
+app.use("/api/v1/subscription", subscriptionRouter); 
 
-import CommentRouter from './routes/comment.routes.js'
-app.use("/api/v1/comments", CommentRouter); 
+import commentRouter from './routes/comment.routes.js'
+app.use("/api/v1/comments", commentRouter); 
+
+import playlistRouter from './routes/playlist.routes.js'
+app.use("/api/v1/playlists", playlistRouter); 
