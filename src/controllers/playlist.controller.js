@@ -40,6 +40,8 @@ export const getUserPlaylists = asyncHandler(async(req, res) => {
     const userId = req?.user._id; 
 
     const playlists = await Playlist.find({owner: userId}); 
+    if(!playlists)
+    throw new ApiError(404, "No playlist found"); 
 
     return res
     .status(200)
@@ -52,6 +54,7 @@ export const getUserPlaylists = asyncHandler(async(req, res) => {
     )
 }); 
 
+//endpoints which need playlistId
 export const getPlaylistById = asyncHandler(async(req, res) => {
     const { playlistId } = req.params
      
@@ -110,7 +113,7 @@ export const getPlaylistById = asyncHandler(async(req, res) => {
     ]); 
 
     if(!playlist)
-    throw new ApiError(500, "Failed to fetch playlist")
+        throw new ApiError(404, "No playlist found"); 
 
     return res
     .status(200)
@@ -122,6 +125,72 @@ export const getPlaylistById = asyncHandler(async(req, res) => {
         )
     ); 
 })
+
+export const updatePlaylist = asyncHandler(async(req, res) => {
+    const { playlistId } = req.params; 
+    const { name, description } = req.body; 
+    const userId = req?.user._id; 
+    
+    if(!playlistId)
+    throw new ApiError(404, "Playlist id not found"); 
+
+    const playlist = await Playlist.findById(playlistId); 
+    if(!playlist)
+    throw new ApiError(500, "No playlist found"); 
+
+    if(playlist.owner.toString() !== userId.toString())
+        throw new ApiError(500, "Unauthorised user to update playlist"); 
+
+    if(name) playlist.name = name; 
+    if(description) playlist.description = description; 
+
+    const updatedPlaylistRefrence = await playlist.save({validateBeforeSave: false}); 
+    if(!updatedPlaylistRefrence)
+        throw new ApiError(500, "Failed to update playlist"); 
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200, 
+            updatedPlaylistRefrence,
+            "Playlist updated Successfully"
+        )
+    );
+})
+
+export const deletePlaylist = asyncHandler(async(req, res) => {
+    const { playlistId } = req.params; 
+    const userId = req?.user._id; 
+        
+    if(!playlistId)
+       throw new ApiError(404, "Playlist id not found"); 
+
+    const playlist = await Playlist.findById(playlistId); 
+    if(!playlist)
+        throw new ApiError(404, "No playlist found"); 
+
+    if(playlist.owner.toString() !== userId.toString())
+       throw new ApiError(500, "Unauthorised user to delete playlist");
+
+    const deletedPlaylistRefrence = await Playlist.findByIdAndDelete(playlistId); 
+    if(!deletedPlaylistRefrence)
+        throw new ApiError(500, "Failed to delete playlist, try again"); 
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            deletedPlaylistRefrence,
+            "Playlist deleted successfully"
+        )
+    );
+})
+
+
+
+
 
 
 

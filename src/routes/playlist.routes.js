@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { verifyJwtToken } from "../middlewares/auth.middleware.js";
-import { createPlaylist, getPlaylistById, getUserPlaylists } from "../controllers/playlist.controller.js";
+import { createPlaylist, deletePlaylist, getPlaylistById, getUserPlaylists, updatePlaylist } from "../controllers/playlist.controller.js";
 
 const router = Router(); 
 router.use(verifyJwtToken); 
@@ -8,9 +8,11 @@ router.use(verifyJwtToken);
 router.route("/")
 .post(createPlaylist)
 .get(getUserPlaylists)
-.patch()
+
 
 router.route("/:playlistId")
 .get(getPlaylistById)
+.patch(updatePlaylist)
+.delete(deletePlaylist)
 
 export default router; 
