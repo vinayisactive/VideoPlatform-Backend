@@ -3,6 +3,7 @@ import { Playlist } from "../models/playlist.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import Video from '../models/video.model.js'
 
 
 export const createPlaylist = asyncHandler(async(req, res) => {
@@ -105,9 +106,6 @@ export const getPlaylistById = asyncHandler(async(req, res) => {
                 owner:{
                     $arrayElemAt:  ["$owner", 0] 
                 },
-                videos:{
-                    $arrayElemAt: ["$videos", 0]
-                }
             }
         }
     ]); 
@@ -193,8 +191,6 @@ export const addVideoToPlaylist = asyncHandler(async(req, res) => {
     const { videoId, playlistId } = req.params;
     const userId = req?.user._id;  
 
-    console.log("Video Id: ",videoId, "Playlist Id: ", playlistId)
-
     if(!videoId)
         throw new ApiError(404, "videoId is missing"); 
     
@@ -209,10 +205,10 @@ export const addVideoToPlaylist = asyncHandler(async(req, res) => {
     if(!playlist)
         throw new ApiError(404, "No playlist found"); 
 
-    if(playlist.owner.toString() !== userId.toString)
+    if(playlist.owner.toString() !== userId.toString())
         throw new ApiError(500, "Unauthorised user to update playlist"); 
 
-    playlist.videos.push(...videoId); 
+    playlist.videos.push(new mongoose.Types.ObjectId(videoId));
 
     const updatedPlaylistRefrence = await playlist.save({validateBeforeSave: false}); 
     if(!updatedPlaylistRefrence)
@@ -227,7 +223,7 @@ export const addVideoToPlaylist = asyncHandler(async(req, res) => {
             "Video added to playlist successfully"
         )
     )
-})
+}); 
 
 
 
