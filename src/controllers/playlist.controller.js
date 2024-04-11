@@ -189,6 +189,46 @@ export const deletePlaylist = asyncHandler(async(req, res) => {
 })
 
 
+export const addVideoToPlaylist = asyncHandler(async(req, res) => {
+    const { videoId, playlistId } = req.params;
+    const userId = req?.user._id;  
+
+    console.log("Video Id: ",videoId, "Playlist Id: ", playlistId)
+
+    if(!videoId)
+        throw new ApiError(404, "videoId is missing"); 
+    
+    if(!playlistId)
+        throw new ApiError(404, "playlistID is missing"); 
+
+    const video = await Video.findById(videoId); 
+    if(!video)
+        throw new ApiError(404, "Video not found"); 
+
+    const playlist = await Playlist.findById(playlistId); 
+    if(!playlist)
+        throw new ApiError(404, "No playlist found"); 
+
+    if(playlist.owner.toString() !== userId.toString)
+        throw new ApiError(500, "Unauthorised user to update playlist"); 
+
+    playlist.videos.push(...videoId); 
+
+    const updatedPlaylistRefrence = await playlist.save({validateBeforeSave: false}); 
+    if(!updatedPlaylistRefrence)
+        throw new ApiError(500, "Failed to update playlist"); 
+
+    return res
+    .status(200)
+    .json( 
+        new ApiResponse(
+            200, 
+            updatedPlaylistRefrence, 
+            "Video added to playlist successfully"
+        )
+    )
+})
+
 
 
 

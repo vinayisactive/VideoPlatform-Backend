@@ -15,4 +15,7 @@ router.route("/:playlistId")
 .patch(updatePlaylist)
 .delete(deletePlaylist)
 
+router.route("/add/:videoId/:playlistId")
+.patch()
+
 export default router; 
