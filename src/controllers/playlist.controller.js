@@ -192,10 +192,10 @@ export const addVideoToPlaylist = asyncHandler(async(req, res) => {
     const userId = req?.user._id;  
 
     if(!videoId)
-        throw new ApiError(404, "videoId is missing"); 
+        throw new ApiError(401, "videoId is missing"); 
     
     if(!playlistId)
-        throw new ApiError(404, "playlistID is missing"); 
+        throw new ApiError(401, "playlistID is missing"); 
 
     const video = await Video.findById(videoId); 
     if(!video)
@@ -224,6 +224,59 @@ export const addVideoToPlaylist = asyncHandler(async(req, res) => {
         )
     )
 }); 
+
+
+export const deleteFromPlaylist = asyncHandler(async(req, res) =>{
+    const {videoId, playlistId} = req.params; 
+    const userId = req?.user._id; 
+
+    if(!videoId)
+      throw new ApiError(404, "videoId is missing"); 
+
+   if(!playlistId)
+      throw new ApiError(404, "playlistId is missing"); 
+
+    const playlist = await Playlist.findById(playlistId);
+    if(!playlist)
+       throw new ApiError(404, "No playlist found"); 
+
+    if(playlist.owner.toString() !== userId.toString())
+        throw new ApiError(500, "Unauthorised user to remove the video"); 
+
+    const isVideoAvailable = await Playlist.find({
+            videos: {
+                $in: [ new mongoose.Types.ObjectId(videoId)]
+            }
+    }); 
+
+    if(!isVideoAvailable)
+        throw new ApiError(500, "This video doesn't exists in playlist"); 
+    
+    const updatedPlaylistRefrence = await Playlist.findByIdAndUpdate(
+        playlistId,
+        {
+            $pull: {
+                videos: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            new: true
+        }
+    ); 
+
+    if(!updatedPlaylistRefrence)
+        throw new ApiError(500, "Failed to remove the video from playlist"); 
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            updatedPlaylistRefrence,
+            "Video removed from playlist successfully"
+        )
+    )
+})
 
 
 
