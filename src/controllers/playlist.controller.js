@@ -37,23 +37,6 @@ export const createPlaylist = asyncHandler(async(req, res) => {
 
 })
 
-export const getUserPlaylists = asyncHandler(async(req, res) => {
-    const userId = req?.user._id; 
-
-    const playlists = await Playlist.find({owner: userId}); 
-    if(!playlists)
-    throw new ApiError(404, "No playlist found"); 
-
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            playlists,
-            "All Playlists fetched"
-        )
-    )
-}); 
 
 //endpoints which need playlistId
 export const getPlaylistById = asyncHandler(async(req, res) => {
@@ -276,7 +259,29 @@ export const deleteFromPlaylist = asyncHandler(async(req, res) =>{
             "Video removed from playlist successfully"
         )
     )
-})
+}); 
+
+
+export const getUsersPlaylists = asyncHandler(async(req, res) => {
+    const {userId} = req.params;
+
+    if(!userId)
+        throw new ApiError(401, "userId is missing"); 
+    
+    const playlists = await Playlist.find({owner: userId}); 
+    if(!playlists)
+    throw new ApiError(404, "No playlist found"); 
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            playlists,
+            "All Playlists fetched"
+        )
+    )
+}); 
 
 
 
