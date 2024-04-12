@@ -3,6 +3,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import Like from "../models/like.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import Video from "../models/video.model.js";
+import mongoose from 'mongoose'
 
 export const toggleVideoLike = asyncHandler(async(req, res) => {
     const {videoId} = req.params;
@@ -44,11 +45,6 @@ export const toggleVideoLike = asyncHandler(async(req, res) => {
     }
 
    let likeCount = await Like.find({video: videoId});  
-   if(!likeCount){
-    likeCount = 0 
-    }else{
-        likeCount = likeCount?.length; 
-    }
 
     return res
     .status(200)
@@ -58,7 +54,7 @@ export const toggleVideoLike = asyncHandler(async(req, res) => {
             {
                 updatedVideoLikeRefrence,
                 isLiked: isLiked,
-                totalLikes: likeCount
+                likeCount: likeCount?.length
             },
             isLiked === true ? "Video liked successfully" : "Video unliked successfully"
         )
@@ -111,12 +107,6 @@ export const toggleCommentLike = asyncHandler(async(req, res) => {
         comment: commentId
     }); 
 
-    if(!likeCount){
-        likeCount = 0
-    }else{
-        likeCount = likeCount?.length;
-    }
-
 
     return res
     .status(200)
@@ -125,10 +115,95 @@ export const toggleCommentLike = asyncHandler(async(req, res) => {
             200, 
             {
                 updatedCommentLikeRefrence,
-                likeCount: likeCount,
+                likeCount: likeCount?.length,
                 isLiked: isLiked
             },
             isLiked === true ? "Comment liked successfully" : "Comment unliked Successfully"
         )
     ); 
-})
+}); 
+
+
+export const getLikedVideosByUser = asyncHandler(async(req, res) => {
+    const userId = req?.user._id; 
+
+    if(!userId)
+        throw new ApiError(401, "Unauthorised user"); 
+
+    const likedVideos = await Like.aggregate([
+        {
+            $match:{
+                likedBy: new mongoose.Types.ObjectId(userId)
+            }
+        },
+        {
+            $match: {
+                "video": { $exists: true },
+            }
+        },
+        {
+            $lookup: {
+                from : "videos",
+                localField: "video",
+                foreignField: "_id",
+                as: "video",
+                pipeline: [
+                    {
+                        $lookup:{
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline:[
+                                {
+                                    $project: {
+                                        username: 1,
+                                        fullName: 1, 
+                                        avatar: 1
+                                    }
+                                },
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                $arrayElemAt: [ "$owner", 0]
+                            }
+                        }
+                    },
+                    {
+                       $project:{
+                        title: 1,
+                        desciption:1,
+                        thumbnail:1,
+                        owner: 1
+                       }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields:{
+                video : {
+                    $arrayElemAt: ["$video", 0]
+                }
+            }
+        }
+    ]); 
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                count: likedVideos?.length,
+                videos: likedVideos,
+            },
+            "Liked videos fetched successfully"            
+        )
+    )
+});
+
+
