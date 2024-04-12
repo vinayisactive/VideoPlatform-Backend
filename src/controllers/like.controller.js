@@ -26,13 +26,13 @@ export const toggleVideoLike = asyncHandler(async(req, res) => {
     ); 
 
     if(ifAlreadyLiked){
-        const updatedVideoLikeRefrence = await Like.findByIdAndDelete(ifAlreadyLiked?._id); 
+        updatedVideoLikeRefrence = await Like.findByIdAndDelete(ifAlreadyLiked?._id); 
         if(!updatedVideoLikeRefrence)
             throw new ApiError(500, "Failed to unlike");
 
         isLiked = false
     }else{
-        const updatedVideoLikeRefrence = await Like.create({
+         updatedVideoLikeRefrence = await Like.create({
             video: videoId,
             likedBy: userId
         }); 
@@ -64,3 +64,71 @@ export const toggleVideoLike = asyncHandler(async(req, res) => {
         )
     ); 
 }); 
+
+
+export const toggleCommentLike = asyncHandler(async(req, res) => {
+    const { commentId } = req.params; 
+    const userId = req?.user._id; 
+
+    let isLiked; 
+    let updatedCommentLikeRefrence; 
+
+    if(!commentId)
+        throw new ApiError(401, "commentId is missing"); 
+
+    if(!userId)
+        throw new ApiError(401, "Unauthorised user")
+
+    const isAlreadyLiked = await Like.findOne(
+        {
+            likedBy: userId,
+            comment : commentId
+        }
+    ); 
+
+    if(isAlreadyLiked){
+        updatedCommentLikeRefrence = await Like.findByIdAndDelete(isAlreadyLiked?._id); 
+        if(!updatedCommentLikeRefrence)
+            throw new ApiError(500, "Failed to unlike commet"); 
+
+        isLiked = false; 
+    }else{
+        updatedCommentLikeRefrence = await Like.create(
+            {
+                comment: commentId,
+                likedBy: userId
+            }
+        ); 
+
+        if(!updatedCommentLikeRefrence)
+            throw new ApiError(500, "Failed to like comment"); 
+        
+        isLiked = true; 
+    }
+
+
+    let likeCount = await Like.find({
+        comment: commentId
+    }); 
+
+    if(!likeCount){
+        likeCount = 0
+    }else{
+        likeCount = likeCount?.length;
+    }
+
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200, 
+            {
+                updatedCommentLikeRefrence,
+                likeCount: likeCount,
+                isLiked: isLiked
+            },
+            isLiked === true ? "Comment liked successfully" : "Comment unliked Successfully"
+        )
+    ); 
+})
