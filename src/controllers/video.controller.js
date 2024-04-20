@@ -1,9 +1,10 @@
 import Video from "../models/video.model.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
+
 
 export const publishAVideo = asyncHandler(async (req, res) => {
 
@@ -30,8 +31,8 @@ export const publishAVideo = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Filed to upload thumbnail");
 
   const publishVideo = await Video.create({
-    videoFile: videoFileCloudinary.url,
-    thumbnail : thumbnailFileCloudinary.url,
+    videoFile: videoFileCloudinary.public_id,
+    thumbnail : thumbnailFileCloudinary.public_id,
     title: title, 
     description: description,
     duration: videoFileCloudinary.duration,
@@ -143,6 +144,9 @@ export const updateVideoDetails = asyncHandler(async(req, res) => {
   const { videoId } = req.params; 
   const userId = req?.user._id; 
 
+  if(!userId)
+    throw new ApiError(404, "Unauthorised user"); 
+
 
   const videoDetails = await Video.findById(videoId); 
   if(!videoDetails)
@@ -156,16 +160,16 @@ export const updateVideoDetails = asyncHandler(async(req, res) => {
   if(req?.files && Array.isArray(req?.files.thumbnail) && req?.files?.thumbnail?.length > 0){
        const thumbnailPath = await req.files.thumbnail[0].path; 
     
+       await deleteFromCloudinary(videoDetails?.thumbnail); 
       thumbnailFileCloudinary = await uploadOnCloudinary(thumbnailPath); 
-      if(!thumbnailFileCloudinary.url)
+      if(!thumbnailFileCloudinary.public_id)
         throw new ApiError(500, "Failed to upload thumbnail"); 
     }
   
 
   if(title) videoDetails.title = title; 
   if(description) videoDetails.description =  description; 
-  if(thumbnailFileCloudinary?.url) videoDetails.thumbnail = thumbnailFileCloudinary.url; 
-
+  if(thumbnailFileCloudinary?.public_id) videoDetails.thumbnail = thumbnailFileCloudinary.url; 
 
   const updatedVideoRefrence = await videoDetails.save({validateBeforeSave: false}); 
   if(!updatedVideoRefrence)

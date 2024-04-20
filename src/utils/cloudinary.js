@@ -23,3 +23,16 @@ export const uploadOnCloudinary = async (localFilePath) => {
     fs.unlinkSync(localFilePath) //unlinkSync for ensuring that locally saved temporary file must delete, In case file uploding process to cloudinary fails.  
   }
 };
+
+
+export const deleteFromCloudinary = async(public_id) => {
+  try {
+    if(!public_id) 
+    return "public_id of assert isn't available";
+
+    const response = await cloudinary.uploader.destroy(public_id) 
+    return response; 
+  } catch (error) {
+    return "Failed to delete assert from third party service";
+  }
+}

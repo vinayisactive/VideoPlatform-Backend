@@ -1,7 +1,7 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import User from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -69,8 +69,8 @@ export const registerUser = asyncHandler(async (req, res) => {
     fullName,
     email,
     bio,
-    avatar: avatarCloudinaryResponse.url,
-    coverImage: coverImageCloudinaryResponse?.url || "",
+    avatar: avatarCloudinaryResponse.public_id,
+    coverImage: coverImageCloudinaryResponse?.public_id || "",
     password,
   });
 
@@ -273,13 +273,18 @@ export const updateUserImages = asyncHandler(async(req, res) => {
      let avatarPath; 
      let coverImagePath; 
 
-     // if avatar is available
+     const user = await User.findById(req?.user._id); 
+
+     if(!user)
+     throw new ApiError(401, "Invalid User"); 
+
      let avatarCloudinaryResponse; 
       if(req?.files && Array.isArray(req?.files?.avatar) && req?.files?.avatar.length > 0){
         avatarPath = await req.files?.avatar[0].path;
 
+        await deleteFromCloudinary(user?.avatar); 
         avatarCloudinaryResponse = await uploadOnCloudinary(avatarPath); 
-        if(!avatarCloudinaryResponse?.url)
+        if(!avatarCloudinaryResponse?.public_id)
         throw new ApiError(400,"Failed to upload avatar")
       }
 
@@ -287,19 +292,16 @@ export const updateUserImages = asyncHandler(async(req, res) => {
       let coverImageCloudinaryResponse; 
       if(req?.files && Array.isArray(req?.files?.coverImage) && req?.files?.coverImage.length > 0){
         coverImagePath = await req.files.coverImage[0].path; 
+
+        await deleteFromCloudinary(user?.coverImage); 
         coverImageCloudinaryResponse = await uploadOnCloudinary(coverImagePath); 
 
-        if (!coverImageCloudinaryResponse?.url)
+        if (!coverImageCloudinaryResponse?.public_id)
         throw new ApiError(400, "Failed to upload cover image");
       }
 
-      const user = await User.findById(req?.user._id); 
-
-      if(!user)
-        throw new ApiError(401, "Invalid User"); 
-
-      if(avatarPath && avatarCloudinaryResponse?.url ) user.avatar = avatarCloudinaryResponse?.url; 
-      if(coverImagePath && coverImageCloudinaryResponse?.url) user.coverImage = coverImageCloudinaryResponse?.url; 
+      if(avatarPath && avatarCloudinaryResponse?.public_id ) user.avatar = avatarCloudinaryResponse?.public_id; 
+      if(coverImagePath && coverImageCloudinaryResponse?.public_id) user.coverImage = coverImageCloudinaryResponse?.public_id; 
 
      await user.save({validateBeforeSave: false}); 
 
